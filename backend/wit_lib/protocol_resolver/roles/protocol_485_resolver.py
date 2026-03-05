@@ -104,13 +104,8 @@ class Protocol485Resolver(IProtocolResolver):
                         if (self.PackSize == tlen):         # 获取加速度、角速度、角度 Obtain acceleration, angular velocity, and angle
                             self.get_data(self.TempBytes, deviceModel)          # 结算数据 Settlement data
                             deviceModel.dataProcessor.onUpdate(deviceModel)     # 触发数据更新事件 Trigger data update event
-                        
-                        # Process readReg response (Function code 0x03)
-                        # PackSize (87) is for the specific bulk read. 
-                        # But if we read other registers, length might differ.
-                        # The logic here seems hardcoded for PackSize=87 or specific structure.
-                        # For readReg return values, we need to extract them.
-                        self.get_find(self.TempBytes, deviceModel)
+                        else:
+                            self.get_find(self.TempBytes, deviceModel)
                         
                         self.TempBytes = []     # 清除数据 Clear data
                     else:                       # 数据CRC校验未通过  Data CRC verification failed
