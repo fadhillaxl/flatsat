@@ -100,12 +100,15 @@ class DeviceModel:
                     if (tlen>0):
                         data = self.serialPort.read(tlen)
                         self.onDataReceived(data)
+                    else:
+                        time.sleep(0.01) # Avoid busy loop
                 except Exception as ex:
                     print(ex)
             else:
                 time.sleep(0.1)
-                print("暂停")
-                break
+                # print("暂停") # Reduce log spam
+                # break # Don't break, allow re-opening
+
 
     def openDevice(self):
         """

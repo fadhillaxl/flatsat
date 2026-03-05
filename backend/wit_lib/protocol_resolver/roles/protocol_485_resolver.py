@@ -86,7 +86,7 @@ class Protocol485Resolver(IProtocolResolver):
         :param deviceModel: 设备模型
         :return:
         """
-        global TempBytes
+        # global TempBytes # Avoid using global variable, use class instance variable
         for val in data:
             self.TempBytes.append(val)
             if (self.TempBytes[0] != deviceModel.ADDR):     # 开头的字节不等于设备ID The starting byte is not equal to the device ID
@@ -104,7 +104,14 @@ class Protocol485Resolver(IProtocolResolver):
                         if (self.PackSize == tlen):         # 获取加速度、角速度、角度 Obtain acceleration, angular velocity, and angle
                             self.get_data(self.TempBytes, deviceModel)          # 结算数据 Settlement data
                             deviceModel.dataProcessor.onUpdate(deviceModel)     # 触发数据更新事件 Trigger data update event
+                        
+                        # Process readReg response (Function code 0x03)
+                        # PackSize (87) is for the specific bulk read. 
+                        # But if we read other registers, length might differ.
+                        # The logic here seems hardcoded for PackSize=87 or specific structure.
+                        # For readReg return values, we need to extract them.
                         self.get_find(self.TempBytes, deviceModel)
+                        
                         self.TempBytes = []     # 清除数据 Clear data
                     else:                       # 数据CRC校验未通过  Data CRC verification failed
                         del self.TempBytes[0]   # 去除第一个字节 Remove the first byte
