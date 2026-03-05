@@ -1,12 +1,26 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from mission.mission_control import MissionControl
 import uvicorn
 import os
 
 app = FastAPI(title="Flatsat API", version="1.0.0")
 
+# Enable CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Initialize Mission Control
 mission = MissionControl()
+
+# Mock Relay State
+relay_states = [False, False, False, False]
 
 @app.on_event("startup")
 async def startup_event():
@@ -28,6 +42,33 @@ def capture_image():
     if filename:
         return {"status": "success", "file": filename}
     return {"status": "failed"}
+
+@app.get("/camera/{camera_id}")
+def get_camera_image(camera_id: int):
+    # In a real system, select the correct device based on camera_id
+    # For now, return the latest captured image or a placeholder
+    image_path = "image.jpg"
+    if not os.path.exists(image_path):
+        # Generate a dummy image if none exists
+        mission.payload.capture(image_path)
+    
+    if os.path.exists(image_path):
+        return FileResponse(image_path)
+    return {"error": "Image not found"}
+
+@app.get("/relays")
+def get_relays():
+    return {"relays": relay_states}
+
+@app.post("/relay/{relay_id}/{state}")
+def control_relay(relay_id: int, state: str):
+    if relay_id < 1 or relay_id > 4:
+        raise HTTPException(status_code=400, detail="Invalid relay ID")
+    
+    is_on = state.lower() == "on"
+    relay_states[relay_id - 1] = is_on
+    print(f"[Relay] Relay {relay_id} set to {state}")
+    return {"status": "success", "relay_id": relay_id, "state": state}
 
 @app.post("/transmit")
 def transmit_telemetry():
