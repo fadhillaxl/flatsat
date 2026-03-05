@@ -1,9 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from mission.mission_control import MissionControl
 import uvicorn
 import os
+import random
+import math
 
 app = FastAPI(title="Flatsat API", version="1.0.0")
 
@@ -21,6 +24,22 @@ mission = MissionControl()
 
 # Mock Relay State
 relay_states = [False, False, False, False]
+
+# Mock SDR State
+class SDRConfig(BaseModel):
+    frequency: int
+    sample_rate: int
+    gain: int
+    rx_enabled: bool
+    tx_enabled: bool
+
+sdr_state = SDRConfig(
+    frequency=433000000,
+    sample_rate=2000000,
+    gain=10,
+    rx_enabled=False,
+    tx_enabled=False
+)
 
 @app.on_event("startup")
 async def startup_event():
@@ -69,6 +88,36 @@ def control_relay(relay_id: int, state: str):
     relay_states[relay_id - 1] = is_on
     print(f"[Relay] Relay {relay_id} set to {state}")
     return {"status": "success", "relay_id": relay_id, "state": state}
+
+@app.get("/sdr/status")
+def get_sdr_status():
+    return sdr_state
+
+@app.post("/sdr/config")
+def set_sdr_config(config: SDRConfig):
+    global sdr_state
+    sdr_state = config
+    print(f"[SDR] Config updated: {config}")
+    return sdr_state
+
+@app.get("/spectrum")
+def get_spectrum():
+    # Generate mock spectrum data (FFT bins)
+    # 256 bins, centered at frequency with some noise and a peak
+    bins = 128
+    data = []
+    base_noise = -80
+    
+    for i in range(bins):
+        val = base_noise + random.uniform(-5, 5)
+        # Add a peak in the center if RX is enabled
+        if sdr_state.rx_enabled:
+            dist = abs(i - bins/2)
+            if dist < 10:
+                val += 50 * math.exp(-dist/2)
+        data.append(val)
+        
+    return {"data": data}
 
 @app.post("/transmit")
 def transmit_telemetry():
