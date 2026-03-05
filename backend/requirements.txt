@@ -11,3 +11,5 @@ requests
 pi-ina219
 mpu6050-raspberrypi
 RPi.bme280
+pyserial
+modbus-tk

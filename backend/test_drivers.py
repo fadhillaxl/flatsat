@@ -81,6 +81,25 @@ def test_camera():
     except Exception as e:
         print(f"❌ FAIL: Exception {e}")
 
+def test_wt901():
+    print("\n[TEST] WT901C485 IMU (/dev/ttyUSB0)...")
+    try:
+        from subsystems.wt901 import WT901C485
+        # Note: This might conflict if ADCS already opened the port, 
+        # so ensure ADCS isn't holding it if running full app.
+        # But for standalone test script it's fine.
+        imu = WT901C485()
+        time.sleep(1) # Wait for a few reads
+        if imu.available:
+            data = imu.get_data()
+            print(f"✅ PASS: Roll={data['angleX']:.2f}, Pitch={data['angleY']:.2f}, Yaw={data['angleZ']:.2f}")
+            print(f"         Acc={data['accX']:.2f},{data['accY']:.2f},{data['accZ']:.2f}")
+            imu.close()
+        else:
+            print("❌ FAIL: WT901C485 not responding on /dev/ttyUSB0")
+    except Exception as e:
+        print(f"❌ FAIL: Exception {e}")
+
 if __name__ == "__main__":
     print("=== FLATSAT HARDWARE DIAGNOSTICS ===")
     
@@ -90,6 +109,7 @@ if __name__ == "__main__":
     # Test individual drivers
     test_ina219()
     test_mpu6050()
+    test_wt901()
     test_bmp280()
     test_camera()
     
