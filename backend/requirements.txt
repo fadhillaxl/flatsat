@@ -8,3 +8,6 @@ fastapi
 uvicorn
 smbus2
 requests
+pi-ina219
+mpu6050-raspberrypi
+bmp280

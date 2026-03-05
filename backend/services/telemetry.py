@@ -2,17 +2,20 @@ import time
 import psutil
 from subsystems.eps import EPS
 from subsystems.adcs import ADCS
+from subsystems.environment import Environment
 
 class Telemetry:
     def __init__(self):
         self.eps = EPS()
         self.adcs = ADCS()
+        self.env = Environment()
         self.start_time = time.time()
 
     def collect(self):
         power_data = self.eps.read_power()
         orientation = self.adcs.read_orientation()
-        temperature = self.adcs.read_temperature()
+        # ADCS temp is internal to MPU, Environment temp is from BMP280 (more accurate for ambient)
+        env_data = self.env.read_data()
         
         voltage = power_data.get("voltage", 0)
         current = power_data.get("current", 0)
@@ -44,10 +47,10 @@ class Telemetry:
                 "cpu_temp": self.get_cpu_temp()
             },
             "environment": {
-                "temperature": temperature,
-                "humidity": 45.0, # Mock
-                "pressure": 1013.25, # Mock
-                "altitude": 0.0 # Mock
+                "temperature": env_data.get("temperature", 0),
+                "humidity": env_data.get("humidity", 0),
+                "pressure": env_data.get("pressure", 0),
+                "altitude": env_data.get("altitude", 0)
             }
         }
 

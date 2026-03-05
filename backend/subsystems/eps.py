@@ -8,7 +8,7 @@ except ImportError:
     INA219 = None
 
 class EPS:
-    def __init__(self, address=0x41):
+    def __init__(self, address=0x40):
         self.available = False
         if INA219:
             try:
