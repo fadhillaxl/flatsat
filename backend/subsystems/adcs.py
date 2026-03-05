@@ -23,14 +23,25 @@ class ADCS:
             try:
                 with i2c_lock:
                     accel = self.sensor.get_accel_data()
-                # Basic mapping, in real usage would need sensor fusion
+                    gyro = self.sensor.get_gyro_data()
                 return {
                     "roll": accel['x'],
                     "pitch": accel['y'],
-                    "yaw": accel['z']
+                    "yaw": accel['z'],
+                    "accel": accel,
+                    "gyro": gyro
                 }
             except Exception as e:
                 print(f"[ADCS] Read error: {e}")
+
+        # Simulation / Mock Data
+        return {
+            "roll": random.uniform(-5, 5),
+            "pitch": random.uniform(-5, 5),
+            "yaw": random.uniform(0, 360),
+            "accel": {"x": random.uniform(-1, 1), "y": random.uniform(-1, 1), "z": 9.8},
+            "gyro": {"x": random.uniform(-0.1, 0.1), "y": random.uniform(-0.1, 0.1), "z": random.uniform(-0.1, 0.1)}
+        }
 
     def read_temperature(self):
         if self.available:
@@ -40,10 +51,3 @@ class ADCS:
             except Exception:
                 pass
         return 25.0 + random.uniform(-2, 2)
-
-        # Simulation / Mock Data
-        return {
-            "roll": random.uniform(-5, 5),
-            "pitch": random.uniform(-5, 5),
-            "yaw": random.uniform(0, 360)
-        }

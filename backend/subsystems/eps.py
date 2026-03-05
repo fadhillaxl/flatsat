@@ -34,5 +34,5 @@ class EPS:
         # Simulation / Mock Data
         return {
             "voltage": 4.1 + random.uniform(-0.1, 0.1),
-            "current": 0.32 + random.uniform(-0.05, 0.05)
+            "current": 320.0 + random.uniform(-50, 50) # mA
         }
