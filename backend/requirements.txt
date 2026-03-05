@@ -1,0 +1,10 @@
+numpy
+opencv-python
+pysstv
+psutil
+pyadi-iio
+pillow
+fastapi
+uvicorn
+smbus2
+requests
