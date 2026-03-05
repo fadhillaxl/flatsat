@@ -12,7 +12,8 @@ class EPS:
         self.available = False
         if INA219:
             try:
-                self.ina = INA219(shunt_ohms=0.1, max_expected_amps=2.0, address=address)
+                # Explicitly specify bus number 1 for Raspberry Pi
+                self.ina = INA219(shunt_ohms=0.1, max_expected_amps=2.0, address=address, busnum=1)
                 self.ina.configure()
                 self.available = True
             except Exception as e:

@@ -11,7 +11,9 @@ class ADCS:
         self.available = False
         if mpu6050:
             try:
-                self.sensor = mpu6050(address)
+                # MPU6050 library usually defaults to bus 1, but we can be explicit if needed
+                # However, mpu6050-raspberrypi library takes address in constructor
+                self.sensor = mpu6050(address, bus=1)
                 self.available = True
             except Exception as e:
                 print(f"[ADCS] Hardware not found: {e}")
