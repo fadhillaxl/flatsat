@@ -1,5 +1,5 @@
 # coding:UTF-8
-from lib.data_processor.interface.i_data_processor import IDataProcessor
+from wit_lib.data_processor.interface.i_data_processor import IDataProcessor
 
 """
     JY901S数据处理器 Data Processor

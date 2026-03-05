@@ -1,7 +1,7 @@
 # coding:UTF-8
 import time
 import datetime
-from lib.protocol_resolver.interface.i_protocol_resolver import IProtocolResolver
+from wit_lib.protocol_resolver.interface.i_protocol_resolver import IProtocolResolver
 
 """
     WT53R485协议解析器 WT53R485 protocol resolver

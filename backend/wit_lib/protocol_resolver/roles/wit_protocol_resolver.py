@@ -1,6 +1,6 @@
 # coding:UTF-8
 import time
-from lib.protocol_resolver.interface.i_protocol_resolver import IProtocolResolver
+from wit_lib.protocol_resolver.interface.i_protocol_resolver import IProtocolResolver
 
 """
     维特协议解析器

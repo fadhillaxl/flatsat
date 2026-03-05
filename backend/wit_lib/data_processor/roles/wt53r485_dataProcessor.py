@@ -1,5 +1,5 @@
 # coding:UTF-8
-from lib.data_processor.interface.i_data_processor import IDataProcessor
+from wit_lib.data_processor.interface.i_data_processor import IDataProcessor
 
 """
     WT53R485数据处理器 Data Processor
