@@ -1,9 +1,13 @@
 import random
+import sys
+# Patch smbus for mpu6050 library compatibility
+import core.smbus_patch
 from core.bus import i2c_lock
 
 try:
     from mpu6050 import mpu6050
-except ImportError:
+except ImportError as e:
+    print(f"[ADCS] Import Error: {e}")
     mpu6050 = None
 
 class ADCS:

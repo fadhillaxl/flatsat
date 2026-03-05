@@ -8,61 +8,64 @@ try:
 except ImportError:
     BMP280 = None
 
+# Support for BME280 (which has ID 0x60)
+try:
+    import bme280
+except ImportError:
+    bme280 = None
+
 class Environment:
     def __init__(self, address=0x76):
         self.available = False
         self.bus = None
         self.sensor = None
+        self.type = "mock"
         
+        # Try BME280 first (since user likely has ID 60)
+        if bme280:
+            try:
+                # bme280 library usage: bme280.load_calibration_params(bus, address)
+                # then bme280.sample(bus, address, params)
+                self.bus = SMBus(1)
+                self.calibration_params = bme280.load_calibration_params(self.bus, address)
+                self.address = address
+                self.available = True
+                self.type = "bme280"
+                print(f"[Environment] Found BME280/BMP280 via bme280 library")
+                return
+            except Exception as e:
+                pass
+                # print(f"[Environment] bme280 init failed: {e}")
+
+        # Fallback to BMP280 library
         if BMP280:
             try:
                 self.bus = SMBus(1)
-                # For many BMP280 clones (like GY-BMP280), the ID might be 0x58 (BMP280) or 0x60 (BME280)
-                # The python library might enforce a check.
-                # If the previous init failed, we can try to manually instantiate or patch.
-                # But 'bmp280' library is quite simple.
                 self.sensor = BMP280(i2c_dev=self.bus, i2c_addr=address)
                 self.available = True
+                self.type = "bmp280"
             except Exception as e:
-                # Specific workaround for "CHIP_ID returned 60" (which means it's actually a BME280 or compatible)
-                if "CHIP_ID" in str(e):
-                    print(f"[Environment] Chip ID mismatch (likely BME280/BMP280 clone). Attempting manual read...")
-                    # If the library blocks us, we can't use the object.
-                    # We might need to implement a simple raw I2C reader for it.
-                    self.available = True
-                    self.manual_mode = True
-                else:
-                    print(f"[Environment] BMP280 not found: {e}")
+                print(f"[Environment] BMP280 init failed: {e}")
         else:
-            print("[Environment] bmp280 library not found")
-        
-        self.manual_mode = getattr(self, 'manual_mode', False)
+            print("[Environment] Libraries not found")
 
     def read_data(self):
         if self.available:
             try:
                 with i2c_lock:
-                    if self.manual_mode:
-                        # Fallback for ID mismatch: Manual raw read if library failed
-                        # Simple BMP280 compensation is complex, so for now we might return
-                        # raw uncompensated or just the previous successful mock if we can't decode easily.
-                        # However, since the user saw "CHIP_ID returned 60", that implies the library
-                        # successfully communicated but rejected the ID.
-                        # We can try to monkey-patch the ID check if we had access, but 
-                        # let's try to just return the mock data for now to not crash, 
-                        # or implement a very basic raw read if critical.
-                        # Given the complexity of calibration, let's fallback to mock but log it.
-                         return {
-                            "temperature": 25.0 + random.uniform(-0.5, 0.5), # Mock fallback
-                            "pressure": 1013.25 + random.uniform(-1, 1),
-                            "altitude": 0.0,
-                            "humidity": 0.0
+                    if self.type == "bme280":
+                        data = bme280.sample(self.bus, self.address, self.calibration_params)
+                        return {
+                            "temperature": data.temperature,
+                            "pressure": data.pressure,
+                            "humidity": data.humidity,
+                            # Approx altitude
+                            "altitude": 44330 * (1 - (data.pressure / 1013.25) ** (1 / 5.255))
                         }
-                    else:
+                    elif self.type == "bmp280":
                         temp = self.sensor.get_temperature()
                         pressure = self.sensor.get_pressure()
                         altitude = 44330 * (1 - (pressure / 1013.25) ** (1 / 5.255))
-                        
                         return {
                             "temperature": temp,
                             "pressure": pressure,
