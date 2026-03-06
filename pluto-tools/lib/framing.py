@@ -23,12 +23,12 @@ def manchester_encode(bits):
             encoded.extend([0, 1])
     return encoded
 
-def manchester_decode(bits):
+def manchester_decode(bits, inverted=False):
     """
     Decodes Manchester encoded bits.
     Expects aligned bits.
-    01 -> 0
-    10 -> 1
+    Normal: 01 -> 0, 10 -> 1
+    Inverted: 01 -> 1, 10 -> 0
     Returns list of decoded bits (0.5x length)
     """
     decoded = []
@@ -36,9 +36,9 @@ def manchester_decode(bits):
     for i in range(0, len(bits)-1, 2):
         pair = (bits[i], bits[i+1])
         if pair == (0, 1):
-            decoded.append(0)
+            decoded.append(1 if inverted else 0)
         elif pair == (1, 0):
-            decoded.append(1)
+            decoded.append(0 if inverted else 1)
         else:
             # Error (00 or 11) - valid Manchester must transition
             # For simplicity, we can guess or mark error. 
@@ -89,13 +89,19 @@ def find_packet(demodulated_bits):
             
             # Decode length first (8 bits data = 16 bits encoded)
             len_encoded = bits[data_start : data_start+16]
-            len_decoded = manchester_decode(len_encoded)
             
-            # Decode length value
-            if len(len_decoded) < 8: return False, []
+            # Try normal Manchester decode
+            len_decoded = manchester_decode(len_encoded, inverted=False)
             length_val = int("".join(str(b) for b in len_decoded), 2)
             
-            if length_val > 64: continue # Sanity check
+            # If length looks crazy, try inverted Manchester
+            inverted_manchester = False
+            if length_val > 64 or length_val == 0:
+                 len_decoded = manchester_decode(len_encoded, inverted=True)
+                 length_val = int("".join(str(b) for b in len_decoded), 2)
+                 inverted_manchester = True
+            
+            if length_val > 64: continue # Still crazy? Skip.
             
             # Calculate total encoded payload length
             # length_val bytes * 8 bits/byte * 2 symbols/bit
@@ -106,7 +112,7 @@ def find_packet(demodulated_bits):
             
             if payload_end <= len(bits):
                 encoded_payload = bits[payload_start:payload_end]
-                decoded_payload = manchester_decode(encoded_payload)
+                decoded_payload = manchester_decode(encoded_payload, inverted=inverted_manchester)
                 return True, decoded_payload
                 
     return False, []
