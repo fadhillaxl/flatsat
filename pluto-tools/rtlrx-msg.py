@@ -6,6 +6,7 @@ from lib.modem import bits_to_text
 CENTER_FREQ = 433500000
 SAMPLE_RATE = 1000000
 BAUD = 1000
+SYNC_WORD = [0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0] # 0x2DD4
 
 BIT_SAMPLES = int(SAMPLE_RATE/BAUD)
 
@@ -18,47 +19,97 @@ sdr.gain = 'auto' # or set a fixed gain like 20
 print(f"Listening on {CENTER_FREQ/1e6} MHz...")
 print("Press Ctrl+C to stop")
 
+def correlate_and_decode(bits):
+    # Search for Sync Word
+    # Simple sliding window correlation
+    
+    sync_len = len(SYNC_WORD)
+    threshold = sync_len - 2 # Allow 2 bit errors
+    
+    # Convert bits to numpy array for easier matching
+    bits_arr = np.array(bits)
+    sync_arr = np.array(SYNC_WORD)
+    
+    # Check every possible start position
+    for i in range(len(bits) - sync_len - 8):
+        window = bits_arr[i : i+sync_len]
+        
+        # Count matching bits
+        matches = np.sum(window == sync_arr)
+        
+        if matches >= threshold:
+            # Sync found!
+            # Next 8 bits are length (in bytes)
+            len_start = i + sync_len
+            len_bits = bits[len_start : len_start+8]
+            
+            # Decode length
+            length_val = int("".join(str(b) for b in len_bits), 2)
+            
+            if length_val > 64: # Sanity check max length
+                continue
+                
+            # Extract payload
+            payload_start = len_start + 8
+            payload_len_bits = length_val * 8
+            payload_end = payload_start + payload_len_bits
+            
+            if payload_end <= len(bits):
+                payload_bits = bits[payload_start:payload_end]
+                text = bits_to_text(payload_bits)
+                print(f"SYNC FOUND! Length: {length_val}")
+                print(f"DECODED: {text}")
+                return True
+                
+    return False
+
 try:
     while True:
         # Read a chunk of samples
-        # 256k samples @ 1Msps = ~0.25 seconds of audio
         samples = sdr.read_samples(256*1024)
         
-        # Simple energy detection to avoid processing noise
         # Calculate average power in dB
         power = 10 * np.log10(np.mean(np.abs(samples)**2) + 1e-20)
         
-        # Threshold (adjust based on your noise floor)
-        # If signal is strong enough, try to decode
         if power > -20: 
             print(f"Signal detected! Power: {power:.2f} dB")
             
-            bits = []
-            for i in range(0, len(samples), BIT_SAMPLES):
-                chunk = samples[i:i+BIT_SAMPLES]
-                if len(chunk) < BIT_SAMPLES:
-                    break
-                
-                # FSK Demodulation logic
-                # For simple FSK, we can check phase changes or frequency content
-                # The original code used phase > 0, which is very simple
-                # Let's keep it consistent but maybe improve later
-                phase = np.angle(np.mean(chunk))
-                if phase > 0:
-                    bits.append(1)
-                else:
-                    bits.append(0)
+            # Quadrature Demodulation (FM Demod)
+            # Calculates instantaneous frequency deviation
+            # d_phase = angle(sample[n] * conj(sample[n-1]))
             
-            text = bits_to_text(bits)
-            # Filter out non-printable characters to reduce noise output
-            clean_text = "".join([c for c in text if c.isprintable()])
+            # Create delayed version of samples
+            samples_delay = np.concatenate(([0], samples[:-1]))
             
-            if len(clean_text) > 3: # Ignore very short noise
-                print(f"DECODED: {clean_text}")
-        else:
-            # Optional: print a dot to show it's alive
-            # print(".", end="", flush=True)
-            pass
+            # Calculate phase difference
+            # We use a small epsilon to avoid divide by zero, though angle handles complex 0
+            d_phase = np.angle(samples * np.conj(samples_delay))
+            
+            # Downsample / Integrate over bit period
+            # Reshape array to (num_bits, samples_per_bit) and take mean
+            
+            # Ensure we have a multiple of BIT_SAMPLES
+            num_bits = len(d_phase) // BIT_SAMPLES
+            d_phase_trunc = d_phase[:num_bits * BIT_SAMPLES]
+            
+            # Reshape to 2D array: rows=bits, cols=samples_per_bit
+            bit_chunks = d_phase_trunc.reshape(-1, BIT_SAMPLES)
+            
+            # Average phase change over each bit period
+            # Positive average = Logic 1 (Positive Frequency Shift)
+            # Negative average = Logic 0 (Negative Frequency Shift)
+            bit_means = np.mean(bit_chunks, axis=1)
+            
+            # Threshold at 0
+            demod_bits = (bit_means > 0).astype(int)
+            
+            # Try to find packet in the demodulated bits
+            found = correlate_and_decode(demod_bits)
+            
+            if not found:
+                 # Fallback: Print raw decode if sync fails (sometimes helps debug)
+                 # But limit length
+                 pass
 
 except KeyboardInterrupt:
     print("\nStopping...")

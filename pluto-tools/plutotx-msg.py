@@ -2,6 +2,7 @@ import adi
 import argparse
 from lib.modem import text_to_bits
 from lib.fsk import generate_fsk
+from lib.framing import create_packet
 
 parser = argparse.ArgumentParser()
 
@@ -23,10 +24,18 @@ sdr.tx_lo = args.freq
 sdr.tx_hardwaregain_chan0 = args.gain
 sdr.tx_cyclic_buffer = False
 
-bits = text_to_bits(args.msg)
+# Convert text to bits
+payload_bits = text_to_bits(args.msg)
 
-samples = generate_fsk(bits,args.rate,args.baud,-10000,10000)
+# Wrap in packet (Preamble + Sync + Length + Payload)
+packet_bits = create_packet(payload_bits)
 
-print("TX:",args.msg)
+# Generate FSK samples
+samples = generate_fsk(packet_bits, args.rate, args.baud, -10000, 10000)
 
-sdr.tx(samples)
+print(f"TX: {args.msg} (Total bits: {len(packet_bits)})")
+
+# Repeat transmission a few times to ensure reception
+# (Since we don't have a continuous TX stream)
+for i in range(3):
+    sdr.tx(samples)
