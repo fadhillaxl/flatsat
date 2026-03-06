@@ -58,6 +58,6 @@ python3 test_tx.py [uri]
 
 ## What to Expect
 
-- The script will configure the PlutoSDR to transmit at **437.0 MHz** (center frequency).
-- It generates a tone at **+100 kHz** offset (so you should see a peak at **437.1 MHz**).
-- Open your SDR receiver software (e.g., SDR Console, GQRX, SDR#) on your laptop and tune to 437.1 MHz to see the signal.
+- The script will configure the PlutoSDR to transmit at **433.5 MHz** (center frequency).
+- It generates a tone at **+10 kHz** offset (so you should see a peak at **433.51 MHz**).
+- Open your SDR receiver software (e.g., SDR Console, GQRX, SDR#) on your laptop and tune to 433.51 MHz to see the signal.

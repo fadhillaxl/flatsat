@@ -12,9 +12,9 @@ def generate_sine_wave(freq, sample_rate, duration=1.0, amplitude=0.5):
 
 def main():
     # Configuration
-    CENTER_FREQ = 437000000  # 437 MHz
+    CENTER_FREQ = 433500000  # 433.5 MHz
     SAMPLE_RATE = 1000000    # 1 MSPS
-    TONE_FREQ = 100000       # 100 kHz offset
+    TONE_FREQ = 10000        # 10 kHz offset (closer to center, easier to see)
     TX_GAIN = -10            # dB (max is usually 0 or 10 depending on firmware, min -80)
     
     # URI of the PlutoSDR
