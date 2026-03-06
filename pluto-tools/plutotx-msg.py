@@ -27,7 +27,7 @@ sdr.tx_cyclic_buffer = False
 # Convert text to bits
 payload_bits = text_to_bits(args.msg)
 
-# Wrap in packet (Preamble + Sync + Length + Payload)
+# Wrap in packet (Preamble + Sync + Manchester Encoded Length + Manchester Encoded Payload)
 packet_bits = create_packet(payload_bits)
 
 # Generate FSK samples
