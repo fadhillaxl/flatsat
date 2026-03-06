@@ -81,9 +81,14 @@ try:
             # Create delayed version of samples
             samples_delay = np.concatenate(([0], samples[:-1]))
             
-            # Calculate phase difference
-            # We use a small epsilon to avoid divide by zero, though angle handles complex 0
+            # Calculate phase difference (Instantaneous Frequency)
             d_phase = np.angle(samples * np.conj(samples_delay))
+            
+            # AFC: Center the frequency
+            # If there is a frequency offset, the mean of d_phase will not be 0.
+            # Subtracting the mean centers the FSK signal around 0 Hz.
+            freq_offset = np.mean(d_phase)
+            d_phase -= freq_offset
             
             # Downsample / Integrate over bit period
             # Reshape array to (num_bits, samples_per_bit) and take mean
@@ -101,15 +106,25 @@ try:
             bit_means = np.mean(bit_chunks, axis=1)
             
             # Threshold at 0
-            demod_bits = (bit_means > 0).astype(int)
+            # INVERTED LOGIC: If bit_means < 0 (Low Freq), it's a 1. If > 0 (High Freq), it's a 0.
+            # This depends on whether the TX sends f1 for 1 or f0 for 1.
+            # Currently TX sends f1 (+10kHz) for 1, and f0 (-10kHz) for 0.
+            # But the receiver might be seeing an inverted spectrum or phase.
+            # Let's try inverting the receiver logic first.
+            demod_bits = (bit_means < 0).astype(int)
             
             # Try to find packet in the demodulated bits
             found = correlate_and_decode(demod_bits)
             
             if not found:
-                 # Fallback: Print raw decode if sync fails (sometimes helps debug)
-                 # But limit length
-                 pass
+                 # Try normal logic if inverted failed
+                 demod_bits_normal = (bit_means > 0).astype(int)
+                 found_normal = correlate_and_decode(demod_bits_normal)
+                 
+                 if not found_normal:
+                     # Debug: Print first 32 bits to see what we are receiving
+                     debug_str = "".join(str(b) for b in demod_bits[:32])
+                     print(f"Raw bits (first 32): {debug_str}...")
 
 except KeyboardInterrupt:
     print("\nStopping...")
