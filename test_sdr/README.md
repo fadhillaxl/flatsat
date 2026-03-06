@@ -7,13 +7,30 @@ It is designed to verify that the PlutoSDR is transmitting correctly.
 
 ### 1. Install System Dependencies
 
-On Raspberry Pi (Debian/Ubuntu):
+The default Raspberry Pi OS repositories often have an outdated version of `libiio`. You need to install the latest version from the Analog Devices repository.
+
+**Step 1: Add the Analog Devices Repository**
 ```bash
+# Install GPG if missing
+sudo apt install -y gpg
+
+# Download the key and save it to the keyring (modern method, apt-key is deprecated)
+wget -O - https://swdownloads.analog.com/cse/apt/generic.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/adi-archive-keyring.gpg
+
+# Add the repository to your sources list (forcing 'bookworm' as 'trixie' might not be supported yet)
+echo "deb [signed-by=/usr/share/keyrings/adi-archive-keyring.gpg] https://swdownloads.analog.com/cse/apt bookworm main" | sudo tee /etc/apt/sources.list.d/analog.list
+
+# Update package lists
 sudo apt update
-sudo apt install libiio-utils libad9361-iio-dev python3-pip
 ```
 
-On macOS (if running from Mac):
+**Step 2: Install Libraries**
+```bash
+# Install libiio and libad9361
+sudo apt install libiio0 libiio-utils libiio-dev libad9361-0 libad9361-dev python3-pip
+```
+
+### 2. Install Python Dependencies
 ```bash
 brew install libiio
 ```
