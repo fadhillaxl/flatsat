@@ -21,7 +21,7 @@ def main():
     # Default USB: ip:192.168.2.1
     # If using Ethernet on Pluto++, it might be different.
     # Try to detect or use default.
-    uri = "ip:192.168.2.1"
+    uri = "ip:192.168.2.10"
     if len(sys.argv) > 1:
         uri = sys.argv[1]
 
